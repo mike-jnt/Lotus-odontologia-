@@ -4,16 +4,26 @@ window.LOTUS_CONFIG = {
     shortName: "Lotus",
     tagline: "Manos que iluminan tu sonrisa"
   },
-  professional: {
-    name: "María Camila Navarretes",
-    displayTitle: "Odontóloga",
-    description: "Atención odontológica integral, cercana y personalizada para cuidar la salud y armonía de cada sonrisa."
-  },
+  professionals: [
+    {
+      name: "María Camila Navarro Franco",
+      displayTitle: "Odontóloga",
+      phone: "3156862526",
+      whatsapp: "573156862526",
+      photo: "assets/doctora-maria-camila.webp"
+    },
+    {
+      name: "Adriana Stella Trujillo Ospina",
+      displayTitle: "Odontóloga",
+      phone: "3157111923",
+      whatsapp: "573157111923",
+      photo: "assets/doctora-adriana-stella.webp"
+    }
+  ],
   contact: {
     address: "Arkacentro, Local E2 B01",
     city: "Ciudad por confirmar",
-    whatsapp: "+57 300 000 0000",
-    email: "contacto@lotusodontologia.com",
+    email: "",
     instagram: "@lotusodontologiaintegral"
   },
   schedule: {
