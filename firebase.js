@@ -17,7 +17,6 @@ import {
   setPersistence,
   browserLocalPersistence,
   signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
@@ -52,7 +51,6 @@ export {
   query,
   orderBy,
   signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged
 };

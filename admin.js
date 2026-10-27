@@ -11,7 +11,6 @@ import {
   query,
   orderBy,
   signInWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
   onAuthStateChanged
 } from './firebase.js';
@@ -60,27 +59,14 @@ import {
       return;
     }
 
-    // El panel administrativo exige que el correo de Firebase Authentication
-    // haya sido verificado antes de conceder cualquier acceso.
-    if (!user.emailVerified) {
-      try {
-        await sendEmailVerification(user);
-      } catch (verificationError) {
-        console.warn('No se pudo reenviar el correo de verificación:', verificationError);
-      }
-      pendingLoginMessage = 'Tu correo aún no está verificado. Firebase envió un enlace de verificación. Ábrelo y luego inicia sesión nuevamente.';
-      pendingLoginType = 'info';
-      await signOut(auth);
-      return;
-    }
-
     try {
       const accessRef = doc(db, 'settings', 'adminAccess');
       let accessSnap = await getDoc(accessRef);
 
-      // Bootstrap seguro sin UID escrito a mano:
-      // el primer usuario VERIFICADO de Authentication que entra al panel
-      // registra su UID como owner. El documento solo puede crearse una vez.
+      // Bootstrap sin verificación de correo:
+      // Firebase Authentication ya validó que el correo/contraseña pertenecen
+      // a una cuenta registrada. El primer usuario autenticado que entra cuando
+      // aún no existe settings/adminAccess queda fijado como owner.
       if (!accessSnap.exists()) {
         try {
           await setDoc(accessRef, {
@@ -93,8 +79,8 @@ import {
             updatedAt: serverTimestamp()
           });
         } catch (bootstrapError) {
-          // Si dos sesiones intentaran registrarse al mismo tiempo,
-          // Firestore permitirá únicamente la primera creación válida.
+          // Si otra sesión creó el owner entre la lectura y la escritura,
+          // las reglas rechazarán este intento y se volverá a leer el propietario real.
           console.warn('El administrador principal pudo haber sido registrado por otra sesión:', bootstrapError);
         }
         accessSnap = await getDoc(accessRef);
@@ -109,12 +95,27 @@ import {
       if (isOwner) {
         roleLabel = 'Administrador principal';
         displayName = access.ownerName || user.displayName || user.email || 'Administrador principal';
+
+        // Firestore no crea colecciones vacías. En el primer acceso del owner,
+        // creamos admins/{uid}; con ese documento nace la colección "admins".
+        const ownerAdminRef = doc(db, 'admins', user.uid);
+        const ownerAdminSnap = await getDoc(ownerAdminRef);
+        if (!ownerAdminSnap.exists()) {
+          await setDoc(ownerAdminRef, {
+            email: user.email || '',
+            name: displayName,
+            role: 'owner',
+            active: true,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        }
       } else {
         const adminSnap = await getDoc(doc(db, 'admins', user.uid));
         const adminData = adminSnap.exists() ? adminSnap.data() : null;
 
-        if (!adminData || adminData.active !== true) {
-          pendingLoginMessage = 'El correo está autenticado, pero no está autorizado para administrar Lotus.';
+        if (!adminData || adminData.active !== true || !['admin', 'reception'].includes(adminData.role)) {
+          pendingLoginMessage = 'El correo y la contraseña son válidos, pero este usuario no está autorizado para administrar Lotus.';
           pendingLoginType = 'error';
           await signOut(auth);
           return;
